@@ -178,20 +178,31 @@ def _run_forensic_job(job_id: str, evidence_path: str, selected_models: list[str
             return False, None
 
         def _predict_file(model, model_key, file_path):
-            """Run one model on one file. Returns (file_name, result_or_error)."""
+            """Run one model on one file. Returns (file_name, result_or_error).
+            The result dict always includes 'full_path' for image embedding in PDF."""
             try:
+                full_path_str = str(file_path)
                 if model_key == "text":
                     text = file_path.read_text(encoding="utf-8", errors="replace")
-                    return file_path.name, {"result": model.predict(text)}
+                    res = model.predict(text)
+                    res["full_path"] = full_path_str
+                    return file_path.name, {"result": res}
                 elif model_key in ("vision", "deepfake"):
-                    return file_path.name, {"result": model.predict(file_path.read_bytes())}
+                    res = model.predict(file_path.read_bytes())
+                    res["full_path"] = full_path_str
+                    return file_path.name, {"result": res}
                 elif model_key in ("malware", "file"):
                     data = file_path.read_bytes()
                     if model_key == "file":
-                        return file_path.name, {"result": model.predict(data, filename=file_path.name)}
-                    return file_path.name, {"result": model.predict(data)}
+                        res = model.predict(data, filename=file_path.name)
+                    else:
+                        res = model.predict(data)
+                    res["full_path"] = full_path_str
+                    return file_path.name, {"result": res}
                 elif model_key == "audio":
-                    return file_path.name, {"result": model.predict(file_path.read_bytes())}
+                    res = model.predict(file_path.read_bytes())
+                    res["full_path"] = full_path_str
+                    return file_path.name, {"result": res}
                 return file_path.name, {"result": {"status": "unknown-model"}}
             except Exception as exc:
                 return file_path.name, {"error": str(exc)}
@@ -373,6 +384,28 @@ async def delete_job(job_id: str):
 
 # ── Report / Export endpoints ──────────────────────────────────────────
 
+def _resolve_image_path(model_key: str, res: dict) -> str:
+    """
+    Determine the image file path to embed in the PDF for this result.
+    - For vision / deepfake on images: use the original file (full_path).
+    - For deepfake on videos: use the saved frame path.
+    - For other models: no image applicable.
+    """
+    if model_key in ("vision", "deepfake"):
+        # Deepfake video → saved extracted frame
+        saved_frame = res.get("saved_frame_path")
+        if saved_frame and os.path.isfile(saved_frame):
+            return saved_frame
+        # Original image file
+        full_path = res.get("full_path", "")
+        if full_path and os.path.isfile(full_path):
+            # Check it's actually an image (not a video/other)
+            ext = os.path.splitext(full_path)[1].lower()
+            if ext in (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"):
+                return full_path
+    return ""
+
+
 def _job_results_to_report_data(job: dict) -> tuple[dict, list]:
     """
     Transform the raw job results dict into the shape expected by
@@ -513,6 +546,7 @@ def _job_results_to_report_data(job: dict) -> tuple[dict, list]:
                 "is_malicious": res.get("is_malicious", False),
                 "is_deepfake": res.get("is_deepfake", False),
                 "violence_detected": res.get("violence_detected", False),
+                "image_path": _resolve_image_path(model_key, res),
             })
 
     report_data = {

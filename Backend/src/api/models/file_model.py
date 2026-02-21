@@ -143,6 +143,35 @@ class FileModel:
             or double_extension
         )
 
+        # Build human-readable summary
+        summary_parts = []
+        if is_suspicious:
+            summary_parts.append(f"Suspicious extension '{ext}'.")
+        if double_extension:
+            summary_parts.append(f"Double extension detected ({'.'.join(parts)}).")
+        if is_hidden:
+            summary_parts.append("Hidden file.")
+        if content_findings:
+            crit = content_findings.get("critical_keywords", [])
+            high = content_findings.get("high_keywords", [])
+            med  = content_findings.get("medium_keywords", [])
+            pii_parts = []
+            if content_findings.get("credit_cards", 0):
+                pii_parts.append(f"{content_findings['credit_cards']} credit cards")
+            if content_findings.get("ssns", 0):
+                pii_parts.append(f"{content_findings['ssns']} SSNs")
+            if content_findings.get("emails", 0):
+                pii_parts.append(f"{content_findings['emails']} emails")
+            if crit:
+                summary_parts.append(f"Critical keywords: {', '.join(crit[:5])}.")
+            if high:
+                summary_parts.append(f"High-risk keywords: {', '.join(high[:5])}.")
+            if med and not crit and not high:
+                summary_parts.append(f"Suspicious keywords: {', '.join(med[:5])}.")
+            if pii_parts:
+                summary_parts.append(f"PII found: {', '.join(pii_parts)}.")
+        summary = " ".join(summary_parts) if summary_parts else f"File '{filename}' — no suspicious indicators."
+
         return {
             "hashes": hashes,
             "size_bytes": len(data),
@@ -154,6 +183,7 @@ class FileModel:
             "risk_level": risk_level,
             "filename": filename,
             "content_findings": content_findings,
+            "summary": summary,
             "metadata": {
                 "extension": ext,
                 "all_extensions": parts,

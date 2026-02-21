@@ -205,8 +205,43 @@ class RemoteVisionModel:
                 "violence_score": 0.0,
                 "risk_level": "LOW",
                 "detection_count": 0,
+                "summary": "Remote inference unavailable.",
                 "error": "Remote inference server unreachable",
             }
+        # Apply the same violence threshold used locally — the Kaggle server uses
+        # score > 0.5 which causes false positives on face close-ups.
+        _REMOTE_VIOLENCE_THRESHOLD = 0.70
+        _HIGH_RISK_OBJECTS = {"knife", "scissors", "gun", "rifle", "pistol", "sword"}
+        _MED_RISK_OBJECTS = {"person", "car", "truck", "motorcycle", "bus", "cell phone", "laptop", "backpack", "suitcase"}
+        v_score = result.get("violence_score", 0.0)
+        if result.get("violence_detected") and v_score < _REMOTE_VIOLENCE_THRESHOLD:
+            result["violence_detected"] = False
+            # Re-derive risk level from detections only
+            dets = result.get("detections") or []
+            if any(d.get("class_name", "").lower() in _HIGH_RISK_OBJECTS for d in dets):
+                result["risk_level"] = "HIGH"
+            elif any(d.get("class_name", "").lower() in _MED_RISK_OBJECTS for d in dets):
+                result["risk_level"] = "MEDIUM"
+            else:
+                result["risk_level"] = "LOW"
+        elif result.get("violence_detected") and v_score >= _REMOTE_VIOLENCE_THRESHOLD:
+            # Tiered: 0.85+ = HIGH, 0.70-0.85 = MEDIUM
+            result["risk_level"] = "HIGH" if v_score >= 0.85 else "MEDIUM"
+
+        # Generate summary from remote result if missing
+        if "summary" not in result:
+            parts = []
+            dets = result.get("detections") or []
+            if dets:
+                obj_counts: dict[str, int] = {}
+                for d in dets:
+                    n = d.get("class_name", "object")
+                    obj_counts[n] = obj_counts.get(n, 0) + 1
+                obj_strs = [f"{c} {n}" if c > 1 else n for n, c in obj_counts.items()]
+                parts.append(f"Detected {', '.join(obj_strs)}.")
+            if result.get("violence_detected"):
+                parts.append(f"Violence detected (score {result.get('violence_score', 0):.2f}).")
+            result["summary"] = " ".join(parts) if parts else "No significant objects or violence detected."
         return result
 
 
@@ -245,6 +280,13 @@ class RemoteDeepfakeModel:
                 "is_deepfake": False,
                 "confidence": 0.0,
                 "label": "model-unavailable",
+                "summary": "Remote inference unavailable.",
                 "error": "Remote inference server unreachable",
             }
+        # Generate summary from remote result if missing
+        if "summary" not in result:
+            is_df = result.get("is_deepfake", False)
+            conf = result.get("confidence", 0)
+            verdict = "FAKE (deepfake)" if is_df else "REAL (authentic)"
+            result["summary"] = (f"Deepfake probability: {conf * 100:.1f}%. Verdict: {verdict}.")
         return result

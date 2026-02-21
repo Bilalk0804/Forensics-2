@@ -20,6 +20,8 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
     PageBreak, HRFlowable, KeepTogether,
 )
+from reportlab.platypus import Image as RLImage
+import os
 
 # ── Colour palette ─────────────────────────────────────────────────
 _DARK = colors.HexColor("#0f172a")
@@ -133,6 +135,53 @@ class ReportGenerator:
         canvas_obj.restoreState()
 
     # ── Public API ──────────────────────────────────────────────────
+    @staticmethod
+    def _build_flag_reason(ev: dict) -> str:
+        """Build a concise human-readable explanation of why this file was flagged."""
+        parts = []
+        risk = ev.get("risk_level", "LOW")
+
+        # Violence
+        if ev.get("violence_detected"):
+            parts.append("Violence detected in image/video content.")
+
+        # Deepfake
+        if ev.get("is_deepfake"):
+            conf = ev.get("confidence", 0)
+            parts.append(f"Deepfake content detected ({conf * 100:.0f}% confidence).")
+
+        # Malware
+        if ev.get("is_malicious") and ev.get("model") in ("malware", "file"):
+            tl = ev.get("threat_label")
+            if tl:
+                parts.append(f"Malware indicator: {tl}.")
+            else:
+                parts.append("Suspicious file structure or extension.")
+
+        # Keywords
+        crit_kws = ev.get("critical_keywords") or []
+        high_kws = ev.get("high_keywords") or []
+        med_kws  = ev.get("medium_keywords") or []
+        if crit_kws:
+            parts.append(f"{len(crit_kws)} critical keyword(s) found: {', '.join(crit_kws[:4])}.")
+        elif high_kws:
+            parts.append(f"{len(high_kws)} high-risk keyword(s) found: {', '.join(high_kws[:4])}.")
+        elif med_kws:
+            parts.append(f"{len(med_kws)} suspicious keyword(s) found: {', '.join(med_kws[:4])}.")
+
+        # Text classification
+        label = ev.get("label", "")
+        model = ev.get("model", "")
+        conf = ev.get("confidence", 0)
+        if model == "text" and label and label not in ("clean", "no-objects", "") and not parts:
+            parts.append(f"Classified as '{label}' ({conf * 100:.0f}% confidence).")
+
+        # Vision detections fallback
+        if model == "vision" and not parts and risk in ("HIGH", "CRITICAL", "MEDIUM"):
+            parts.append(f"Flagged by vision analysis (risk: {risk}).")
+
+        return " ".join(parts) if parts else ""
+
     def generate(
         self,
         report_data: Dict[str, Any],
@@ -232,77 +281,7 @@ class ReportGenerator:
         story.append(rb_table)
         story.append(Spacer(1, 14))
 
-        # ─── 3. THREATS TABLE ──────────────────────────────────────
-        if threats:
-            story.append(Paragraph("Threats Detected", s["h1"]))
-            story.append(HRFlowable(width="100%", thickness=1, color=_BORDER, spaceAfter=8))
-
-            t_rows = [["#", "Source", "Severity", "Description"]]
-            for idx, t in enumerate(threats, 1):
-                sev = str(t.get("severity", "")).upper()
-                t_rows.append([
-                    str(idx),
-                    str(t.get("source", "")),
-                    sev,
-                    Paragraph(str(t.get("description", "")), s["body"]),
-                ])
-            t_table = Table(t_rows, repeatRows=1, colWidths=[28, 100, 70, doc.width - 198])
-            t_styles = [
-                ("BACKGROUND", (0, 0), (-1, 0), _DARK),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.4, _BORDER),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ]
-            # Colour each row by severity
-            for row_idx in range(1, len(t_rows)):
-                sev = t_rows[row_idx][2]
-                _, bg = _risk_colors(sev)
-                t_styles.append(("BACKGROUND", (0, row_idx), (-1, row_idx), bg))
-            t_table.setStyle(TableStyle(t_styles))
-            story.append(t_table)
-            story.append(Spacer(1, 14))
-
-        # ─── 4. FLAGGED FILES TABLE ────────────────────────────────
-        if files:
-            story.append(Paragraph("Flagged Files", s["h1"]))
-            story.append(HRFlowable(width="100%", thickness=1, color=_BORDER, spaceAfter=8))
-
-            f_rows = [["#", "File Path", "Size", "MIME", "Risk"]]
-            for idx, fi in enumerate(files, 1):
-                risk = fi.get("risk_level", "LOW")
-                f_rows.append([
-                    str(idx),
-                    Paragraph(str(fi.get("file_path", "")), s["body"]),
-                    str(fi.get("file_size", "")),
-                    str(fi.get("mime_type", "")),
-                    risk,
-                ])
-            f_table = Table(f_rows, repeatRows=1, colWidths=[28, doc.width - 228, 60, 90, 50])
-            f_styles = [
-                ("BACKGROUND", (0, 0), (-1, 0), _DARK),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.4, _BORDER),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
-            for row_idx in range(1, len(f_rows)):
-                risk = f_rows[row_idx][4]
-                fg, bg = _risk_colors(risk)
-                f_styles.append(("BACKGROUND", (4, row_idx), (4, row_idx), bg))
-                f_styles.append(("TEXTCOLOR", (4, row_idx), (4, row_idx), fg))
-                f_styles.append(("FONTNAME", (4, row_idx), (4, row_idx), "Helvetica-Bold"))
-            f_table.setStyle(TableStyle(f_styles))
-            story.append(f_table)
-            story.append(Spacer(1, 14))
-
-        # ─── 5. EVIDENCE DETAIL CARDS ──────────────────────────────
+        # ─── 3. EVIDENCE DETAIL CARDS ──────────────────────────────
         if evidence:
             story.append(PageBreak())
             story.append(Paragraph("Evidence Detail", s["h1"]))
@@ -340,7 +319,11 @@ class ReportGenerator:
                 ]))
                 card_items.append(hdr)
 
-                # Card body rows
+                # ── Thumbnail + info side-by-side ──────────────────
+                image_path = ev.get("image_path", "")
+                has_thumb = image_path and os.path.isfile(image_path)
+
+                # Build body rows for the info table
                 body_rows = []
                 if model:
                     body_rows.append(["Model", model])
@@ -353,6 +336,12 @@ class ReportGenerator:
                 summary = ev.get("summary", "")
                 if summary:
                     body_rows.append(["Summary", Paragraph(str(summary)[:300], s["body"])])
+
+                # "Why Flagged" — build a human-readable reason
+                reason = self._build_flag_reason(ev)
+                if reason:
+                    body_rows.append(["Why Flagged",
+                                      Paragraph(f"<font color='#{_RED.hexval()[2:]}'>{reason}</font>", s["body"])])
 
                 # Keywords
                 crit_kws = ev.get("critical_keywords") or []
@@ -379,7 +368,43 @@ class ReportGenerator:
                 if flags:
                     body_rows.append(["Flags", ", ".join(flags)])
 
-                if body_rows:
+                if has_thumb and body_rows:
+                    # Layout: thumbnail on left, info table on right
+                    try:
+                        thumb = RLImage(image_path, width=1.2 * inch, height=1.5 * inch,
+                                        kind='proportional')
+                    except Exception:
+                        thumb = Paragraph("<i>[image unavailable]</i>", s["small"])
+                        has_thumb = False
+
+                    info_table = Table(body_rows, colWidths=[100, doc.width - 250])
+                    info_table.setStyle(TableStyle([
+                        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (0, -1), _SLATE),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                        ("LINEBELOW", (0, 0), (-1, -2), 0.3, _BORDER),
+                    ]))
+
+                    # Combine thumbnail + info in a side-by-side table
+                    composite = Table(
+                        [[thumb, info_table]],
+                        colWidths=[1.4 * inch, doc.width - 1.4 * inch - 20],
+                    )
+                    composite.setStyle(TableStyle([
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), 6),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                        ("BOX", (0, 0), (-1, -1), 0.5, _BORDER),
+                    ]))
+                    card_items.append(composite)
+                elif body_rows:
+                    # No thumbnail — original table layout
                     body_table = Table(body_rows, colWidths=[110, doc.width - 130])
                     body_table.setStyle(TableStyle([
                         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),

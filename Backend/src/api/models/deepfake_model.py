@@ -8,9 +8,15 @@ Also works on single images.
 
 import io
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Directory to persist extracted frames for PDF embedding
+_FRAMES_DIR = Path(__file__).resolve().parents[3] / "OUTPUT" / "frames"
+_FRAMES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class DeepfakeModel:
@@ -52,8 +58,8 @@ class DeepfakeModel:
             return {"is_deepfake": False, "confidence": 0.0, "label": "no-frames", "error": "Could not extract frames from input"}
 
         scores = []
-        for frame in frames:
-            score = self._classify_frame(frame)
+        for frame_img, _ in frames:
+            score = self._classify_frame(frame_img)
             if score is not None:
                 scores.append(score)
 
@@ -63,10 +69,22 @@ class DeepfakeModel:
         avg_fake_score = sum(scores) / len(scores)
         is_deepfake = avg_fake_score > 0.5
 
+        # Build human-readable summary
+        verdict = "FAKE (deepfake)" if is_deepfake else "REAL (authentic)"
+        summary = (f"{len(frames)} frame(s) analysed. "
+                   f"Deepfake probability: {avg_fake_score * 100:.1f}%. "
+                   f"Verdict: {verdict}.")
+
+        # Use the first saved frame path (if available) for PDF thumbnail
+        saved_frame = frames[0][1] if frames[0][1] else None
+
         return {
             "is_deepfake": is_deepfake,
             "confidence": round(avg_fake_score if is_deepfake else 1.0 - avg_fake_score, 4),
             "label": "fake" if is_deepfake else "real",
+            "frames_analyzed": len(frames),
+            "summary": summary,
+            "saved_frame_path": saved_frame,
         }
 
     # ------------------------------------------------------------------ #
@@ -98,17 +116,34 @@ class DeepfakeModel:
             return None
 
     @staticmethod
-    def _extract_frames(data: bytes, max_frames: int = 5) -> list:
+    def _extract_frames(data: bytes, max_frames: int = 5) -> list[tuple]:
         """
         Extract frames from video bytes, or return a single image.
-        Falls back to treating data as an image if cv2 is unavailable.
+        Returns list of (PIL.Image, saved_path_or_None) tuples.
+        Saves the first frame to disk for PDF thumbnail embedding.
         """
         from PIL import Image
+        import hashlib
 
-        # Try as image first (most common path for the /api/video endpoint)
+        # Unique prefix for this file's frames
+        data_hash = hashlib.md5(data[:4096]).hexdigest()[:10]
+
+        def _save_frame(img: Image.Image, idx: int = 0) -> str | None:
+            """Save a frame to OUTPUT/frames/ and return its path."""
+            try:
+                fname = f"frame_{data_hash}_{idx}.jpg"
+                save_path = _FRAMES_DIR / fname
+                img.save(str(save_path), "JPEG", quality=85)
+                return str(save_path)
+            except Exception as exc:
+                logger.debug("Failed to save frame: %s", exc)
+                return None
+
+        # Try as image first (most common path)
         try:
             img = Image.open(io.BytesIO(data)).convert("RGB")
-            return [img]
+            saved = _save_frame(img, 0)
+            return [(img, saved)]
         except Exception:
             pass
 
@@ -116,7 +151,6 @@ class DeepfakeModel:
         try:
             import cv2
             import tempfile
-            import os
             import numpy as np
 
             with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
@@ -132,13 +166,16 @@ class DeepfakeModel:
                 return []
 
             indices = [int(i * total_frames / max_frames) for i in range(max_frames)]
-            frames = []
-            for idx in indices:
+            frames: list[tuple] = []
+            for i, idx in enumerate(indices):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
                 ret, frame = cap.read()
                 if ret:
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frames.append(Image.fromarray(rgb))
+                    pil_img = Image.fromarray(rgb)
+                    # Save only the first frame for PDF thumbnail
+                    saved = _save_frame(pil_img, i) if i == 0 else None
+                    frames.append((pil_img, saved))
 
             cap.release()
             os.unlink(tmp_path)
