@@ -46,7 +46,9 @@ export interface JobStatus {
     outputPath?: string;
     selectedModels: string[];
   };
-  startTime?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  execution_time?: number | null;
 }
 
 class MasterAgentAPI {
@@ -120,6 +122,46 @@ class MasterAgentAPI {
     if (!response.ok) {
       throw new Error(`Failed to delete job: ${response.statusText}`);
     }
+  }
+
+  /**
+   * Download a PDF forensic report for a completed job.
+   */
+  async downloadPdfReport(jobId: string): Promise<void> {
+    const response = await fetch(`${MASTER_AGENT_BASE}/report/${jobId}/pdf`);
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err || `PDF download failed: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `forensic_report_${jobId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Download a structured JSON report for a completed job.
+   */
+  async downloadJsonReport(jobId: string): Promise<void> {
+    const response = await fetch(`${MASTER_AGENT_BASE}/report/${jobId}/json`);
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err || `JSON download failed: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `forensic_report_${jobId}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   /**

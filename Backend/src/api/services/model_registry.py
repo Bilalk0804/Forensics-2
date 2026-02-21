@@ -15,18 +15,67 @@ class ModelRegistry:
     """
     Central registry for all forensic ML models.
     Models are loaded once at startup and shared across requests.
+
+    When USE_REMOTE_INFERENCE=true and KAGGLE_INFERENCE_URL is set, the four
+    heavy GPU models (text, vision, audio, deepfake) are replaced with lightweight
+    HTTP wrappers that call a Kaggle GPU notebook via ngrok.  File and malware
+    models always run locally (no HuggingFace, already fast).
     """
     _registry: dict[str, Any] = {}
 
     @classmethod
     async def load_all(cls) -> None:
         """Load all forensic analysis models at startup."""
-        model_loaders = {
-            "text": ("api.models.text_model", "TextModel"),
-            "vision": ("api.models.vision_model", "VisionModel"),
+        from src import config  # local import avoids circular imports at module level
+
+        if config.USE_REMOTE_INFERENCE and config.KAGGLE_INFERENCE_URL:
+            logger.info("Remote inference mode — connecting to Kaggle GPU at %s", config.KAGGLE_INFERENCE_URL)
+            await cls._load_remote(config.KAGGLE_INFERENCE_URL)
+        else:
+            if config.USE_REMOTE_INFERENCE:
+                logger.warning("USE_REMOTE_INFERENCE=true but KAGGLE_INFERENCE_URL is empty — falling back to local")
+            await cls._load_local()
+
+    # ------------------------------------------------------------------
+    @classmethod
+    async def _load_remote(cls, base_url: str) -> None:
+        """Register remote HTTP wrappers for GPU models; load local lightweight models."""
+        from api.models.remote_models import (
+            RemoteTextModel, RemoteAudioModel, RemoteVisionModel, RemoteDeepfakeModel
+        )
+
+        # Remote GPU models — instantiated immediately (no heavy download)
+        cls._registry["text"]     = RemoteTextModel(base_url)
+        cls._registry["audio"]    = RemoteAudioModel(base_url)
+        cls._registry["vision"]   = RemoteVisionModel(base_url)
+        cls._registry["deepfake"] = RemoteDeepfakeModel(base_url)
+        logger.info("✓ Remote models registered (text, audio, vision, deepfake)")
+
+        # Local lightweight models — still run on this machine
+        local_loaders = {
             "malware": ("api.models.malware_model", "MalwareModel"),
-            "file": ("api.models.file_model", "FileModel"),
-            "audio": ("api.models.audio_model", "AudioModel"),
+            "file":    ("api.models.file_model",    "FileModel"),
+        }
+        for key, (module_path, class_name) in local_loaders.items():
+            try:
+                module = __import__(module_path, fromlist=[class_name])
+                model_class = getattr(module, class_name)
+                cls._registry[key] = await asyncio.to_thread(model_class)
+                logger.info(f"✓ {key} model loaded (local)")
+            except Exception as e:
+                logger.error(f"✗ {key} model initialization failed: {e}")
+                cls._registry[key] = None
+
+    # ------------------------------------------------------------------
+    @classmethod
+    async def _load_local(cls) -> None:
+        """Original behaviour — load all six models locally."""
+        model_loaders = {
+            "text":     ("api.models.text_model",     "TextModel"),
+            "vision":   ("api.models.vision_model",   "VisionModel"),
+            "malware":  ("api.models.malware_model",  "MalwareModel"),
+            "file":     ("api.models.file_model",     "FileModel"),
+            "audio":    ("api.models.audio_model",    "AudioModel"),
             "deepfake": ("api.models.deepfake_model", "DeepfakeModel"),
         }
 

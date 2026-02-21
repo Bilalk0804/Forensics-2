@@ -112,6 +112,13 @@ HF_BATCH_SIZE = 8
 # --- API Keys ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
+# --- Remote Inference (Kaggle / Colab GPU) ---
+# Set USE_REMOTE_INFERENCE=true and KAGGLE_INFERENCE_URL=<ngrok url> to offload
+# heavy ML models (text, vision, audio, deepfake) to a Kaggle GPU notebook.
+# File and malware models always run locally.
+USE_REMOTE_INFERENCE = os.getenv("USE_REMOTE_INFERENCE", "false").lower() == "true"
+KAGGLE_INFERENCE_URL = os.getenv("KAGGLE_INFERENCE_URL", "")  # e.g. https://xxxx.ngrok-free.app
+
 # --- Summarization Settings ---
 SUMMARIZATION_TEMPERATURE = 0.5
 SUMMARIZATION_MAX_TOKENS = 2000

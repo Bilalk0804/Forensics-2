@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play, ArrowLeft, ArrowRight, TrendingUp, Clock, Files, ShieldAlert,
-  Activity, Loader2
+  Activity, Loader2, Download, RotateCcw, AlertTriangle, CheckCircle2
 } from "lucide-react";
 
 import Header from "@/components/forensics/Header";
@@ -21,29 +21,14 @@ import { masterAgentAPI, type JobStatus } from "@/lib/masterAgentAPI";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-const LOG_TEMPLATES: { level: LogEntry["level"]; msgs: string[] }[] = [
-  { level: "info", msgs: ["Initializing disk acquisition module…", "Mounting image", "Filesystem detected: NTFS 3.1", "Scanning MFT entries", "Hash verification: SHA-256 OK", "Loading YARA ruleset v4.5.2…"] },
-  { level: "warn", msgs: ["High entropy section detected", "Suspicious registry run-key modification", "Packed binary detected — unpacking…", "Anomalous network socket in process 1492"] },
-  { level: "error", msgs: ["CRIT: Credential dumping tool identified", "ERROR: Ransomware dropper found", "CRIT: C2 beacon detected"] },
-  { level: "debug", msgs: ["Checking PE header at offset 0x1A4", "Reading cluster chain", "Entropy score: 7.91 (threshold 7.0)", "Loaded 14,823 IOC signatures"] },
-];
-
-function generateLog(): LogEntry {
-  const t = LOG_TEMPLATES[Math.floor(Math.random() * LOG_TEMPLATES.length)];
+function tsNow(): string {
   const now = new Date();
-  return {
-    id: `log-${Date.now()}-${Math.random()}`,
-    ts: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`,
-    level: t.level,
-    msg: t.msgs[Math.floor(Math.random() * t.msgs.length)],
-  };
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 }
 
-const INITIAL_LOGS: LogEntry[] = [
-  { id: "l0", ts: "09:10:00", level: "info", msg: "Sentinel Forensics v3.7.2 initialized" },
-  { id: "l1", ts: "09:10:01", level: "info", msg: "Evidence database loaded" },
-  { id: "l2", ts: "09:10:02", level: "debug", msg: "YARA ruleset v4.5.2 — 14,823 signatures active" },
-];
+function makeLog(level: LogEntry["level"], msg: string): LogEntry {
+  return { id: `log-${Date.now()}-${Math.random()}`, ts: tsNow(), level, msg };
+}
 
 /** Convert backend job results into dashboard-friendly data */
 function mapJobResults(job: JobStatus) {
@@ -51,6 +36,8 @@ function mapJobResults(job: JobStatus) {
   const files: FileEntry[] = [];
   let totalFiles = 0;
   let totalThreats = 0;
+  let confidenceSum = 0;
+  let confidenceCount = 0;
 
   if (job.results) {
     Object.entries(job.results).forEach(([modelId, result]) => {
@@ -59,40 +46,79 @@ function mapJobResults(job: JobStatus) {
       totalThreats += result.threats || 0;
 
       details.forEach((d, idx) => {
-        // Add to file inventory
+        if (!d.result || d.result.status === "skipped") return;
+
+        const r = d.result as Record<string, unknown>;
         const fileName = d.file.split(/[\\/]/).pop() || d.file;
         const filePath = d.file.substring(0, d.file.lastIndexOf("\\") + 1) || d.file;
-        const riskLevel: FileEntry["risk"] = d.error ? "high" : (result.threats && result.threats > 0 ? "medium" : "clean");
-        files.push({
-          id: `${modelId}-f${idx}`,
-          name: fileName,
-          path: filePath,
-          size: "",
-          mime: "",
-          risk: riskLevel,
-          modified: "",
-        });
 
-        // If result indicates threat, add to threat ledger
-        if (d.result && typeof d.result === "object") {
-          const r = d.result as Record<string, unknown>;
-          if (r.malicious || r.threat || r.severity) {
-            threats.push({
-              id: `${modelId}-t${idx}`,
-              severity: ((r.severity as string) || "medium") as ThreatEntry["severity"],
-              name: (r.threat_name as string) || (r.label as string) || `${modelId} detection`,
-              path: d.file,
-              type: modelId,
-              timestamp: new Date().toTimeString().slice(0, 8),
-              hash: (r.hash as string) || "",
-            });
-          }
+        // Track real confidence from model output
+        if (typeof r.confidence === "number") {
+          confidenceSum += r.confidence as number;
+          confidenceCount++;
+        }
+
+        // Determine per-file risk from actual model output
+        const isThreat =
+          r.is_malicious === true ||
+          r.is_deepfake === true ||
+          r.violence_detected === true ||
+          (typeof r.risk_level === "string" && ["HIGH", "CRITICAL"].includes((r.risk_level as string).toUpperCase()));
+
+        const riskLevel: FileEntry["risk"] = d.error
+          ? "high"
+          : isThreat
+            ? "high"
+            : (r.risk_level as string)?.toUpperCase() === "MEDIUM"
+              ? "medium"
+              : "clean";
+
+        // Only include files with actual threats (MEDIUM/HIGH/CRITICAL)
+        if (riskLevel !== "clean") {
+          files.push({
+            id: `${modelId}-f${idx}`,
+            name: fileName,
+            path: filePath,
+            size: r.size_bytes != null ? `${(r.size_bytes as number).toLocaleString()} B` : "",
+            mime: (r.mime_type as string) || "",
+            risk: riskLevel,
+            modified: "",
+          });
+        }
+
+        // Add to threat ledger if real threat detected
+        if (isThreat) {
+          const severity: ThreatEntry["severity"] =
+            (r.risk_level as string)?.toUpperCase() === "CRITICAL" ? "critical"
+            : r.is_malicious ? "high"
+            : r.is_deepfake ? "high"
+            : r.violence_detected ? "high"
+            : "medium";
+
+          threats.push({
+            id: `${modelId}-t${idx}`,
+            severity,
+            name:
+              (r.threat_label as string) ||
+              (r.label as string) ||
+              (r.is_deepfake ? "Deepfake detected" : "") ||
+              (r.violence_detected ? "Violence detected" : "") ||
+              `${modelId} threat`,
+            path: d.file,
+            type: modelId,
+            timestamp: new Date().toTimeString().slice(0, 8),
+            hash: (r.hashes as any)?.sha256 || "",
+          });
         }
       });
     });
   }
 
-  return { threats, files, totalFiles, totalThreats };
+  const avgConfidence = confidenceCount > 0
+    ? Math.round((confidenceSum / confidenceCount) * 100)
+    : null;
+
+  return { threats, files, totalFiles, totalThreats, avgConfidence };
 }
 
 // ─── Page Component ──────────────────────────────────────────
@@ -120,7 +146,7 @@ export default function Index() {
   const [scanProgress, setScanProgress] = useState(0);
   const [showDashboard, setShowDashboard] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [threats, setThreats] = useState<ThreatEntry[]>([]);
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -132,6 +158,7 @@ export default function Index() {
     critical: number; high: number; medium: number; low: number; clean: number;
   } | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
   const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef(false);
@@ -204,15 +231,9 @@ export default function Index() {
     }));
     setStages(runningStages);
 
-    addLog({
-      id: `l-start-${Date.now()}`,
-      ts: new Date().toTimeString().slice(0, 8),
-      level: "info",
-      msg: `Initiating AI forensic analysis on ${selectedDrive} with ${modelNames.length} models…`,
-    });
+    addLog(makeLog("info", `Starting analysis on ${selectedDrive} with ${modelNames.length} model(s)…`));
 
-    // Start generating fake log lines for visual feedback
-    logIntervalRef.current = setInterval(() => addLog(generateLog()), 800);
+    // Log real events — no fake log generation
 
     try {
       // 1. Start the analysis job
@@ -221,12 +242,8 @@ export default function Index() {
         selectedModels: modelNames,
       });
 
-      addLog({
-        id: `l-job-${Date.now()}`,
-        ts: new Date().toTimeString().slice(0, 8),
-        level: "info",
-        msg: `Job ${result.jobId} started — polling for completion…`,
-      });
+      setCurrentJobId(result.jobId);
+      addLog(makeLog("info", `Job ${result.jobId} started — polling for results…`));
 
       // 2. Poll for completion with progress callback
       const completedJob = await masterAgentAPI.waitForCompletion(
@@ -266,66 +283,67 @@ export default function Index() {
 
       if (completedJob.status === "completed") {
         const mapped = mapJobResults(completedJob);
-        const elapsed = completedJob.startTime
-          ? `${Math.round((Date.now() - new Date(completedJob.startTime).getTime()) / 1000)}s`
-          : "—";
+        // Use job-level execution_time (startTime→endTime on backend), then fall back
+        const rawSecs = completedJob.execution_time
+          ?? ((completedJob.startTime && completedJob.endTime)
+            ? (new Date(completedJob.endTime).getTime() - new Date(completedJob.startTime).getTime()) / 1000
+            : null);
+        const elapsed = rawSecs != null ? `${Number(rawSecs).toFixed(1)}s` : "—";
 
         setScanStatus("complete");
         setScanProgress(100);
         setThreats(mapped.threats);
         setFiles(mapped.files);
         setSnapshotData({
-          confidence: mapped.totalThreats > 0 ? 87 : 96,
+          confidence: mapped.avgConfidence ?? 0,
           executionTime: elapsed,
           totalFiles: mapped.totalFiles || mapped.files.length,
           threats: mapped.totalThreats || mapped.threats.length,
         });
         setStages(prev => prev.map(s => ({ ...s, status: "complete" as const })));
 
-        // Build risk breakdown
+        // Build risk breakdown from real per-file results
         const riskCounts = { critical: 0, high: 0, medium: 0, low: 0, clean: 0 };
-        mapped.threats.forEach(t => {
-          if (t.severity in riskCounts) riskCounts[t.severity as keyof typeof riskCounts]++;
+        mapped.files.forEach(f => {
+          if (f.risk === "high") riskCounts.high++;
+          else if (f.risk === "medium") riskCounts.medium++;
+          else riskCounts.clean++;
         });
-        riskCounts.clean = Math.max(0, (mapped.totalFiles || mapped.files.length) - mapped.threats.length);
+        mapped.threats.forEach(t => {
+          if (t.severity === "critical") riskCounts.critical++;
+        });
         setRiskBreakdown(riskCounts);
 
-        setAiSummary(
-          `Analysis of ${selectedDrive} completed. ${mapped.totalFiles || mapped.files.length} files analyzed across ${modelNames.length} models. ` +
-          `${mapped.totalThreats || mapped.threats.length} potential threat(s) detected.` +
-          (mapped.threats.length > 0
-            ? ` Immediate review recommended for: ${mapped.threats.slice(0, 3).map(t => t.name).join(", ")}.`
-            : " No significant threats found.")
-        );
+        // Build summary from real results
+        const fileCount = mapped.totalFiles || mapped.files.length;
+        const threatCount = mapped.totalThreats || mapped.threats.length;
+        const summaryParts = [
+          `Analyzed ${fileCount} files across ${modelNames.length} model(s).`,
+          `${threatCount} threat(s) detected.`,
+        ];
+        if (mapped.threats.length > 0) {
+          summaryParts.push(
+            `Flagged: ${mapped.threats.slice(0, 5).map(t => `${t.name} (${t.severity})`).join(", ")}.`
+          );
+        }
+        if (mapped.avgConfidence != null) {
+          summaryParts.push(`Average model confidence: ${mapped.avgConfidence}%.`);
+        }
+        setAiSummary(summaryParts.join(" "));
 
-        addLog({
-          id: `l-done-${Date.now()}`,
-          ts: new Date().toTimeString().slice(0, 8),
-          level: "info",
-          msg: "Pipeline complete — all results collated.",
-        });
+        addLog(makeLog("info", `Pipeline complete — ${fileCount} files, ${threatCount} threat(s)`));
       } else {
         // Job failed
         setScanStatus("error");
         setScanError(completedJob.error || "Analysis failed");
-        addLog({
-          id: `l-err-${Date.now()}`,
-          ts: new Date().toTimeString().slice(0, 8),
-          level: "error",
-          msg: `Analysis failed: ${completedJob.error || "Unknown error"}`,
-        });
+        addLog(makeLog("error", `Analysis failed: ${completedJob.error || "Unknown error"}`));
       }
     } catch (err: unknown) {
       if (logIntervalRef.current) clearInterval(logIntervalRef.current);
       const msg = err instanceof Error ? err.message : String(err);
       setScanStatus("error");
       setScanError(msg);
-      addLog({
-        id: `l-err-${Date.now()}`,
-        ts: new Date().toTimeString().slice(0, 8),
-        level: "error",
-        msg: `Error: ${msg}`,
-      });
+      addLog(makeLog("error", `Error: ${msg}`));
     } finally {
       setLoading(false);
     }
@@ -533,6 +551,54 @@ export default function Index() {
                 </div>
               )}
 
+              {/* Verdict banner */}
+              {scanStatus === "complete" && snapshotData && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl px-6 py-4 flex items-center justify-between"
+                  style={{
+                    background: (snapshotData.threats > 0)
+                      ? "linear-gradient(135deg, hsl(var(--destructive) / 0.12), hsl(var(--threat-high) / 0.08))"
+                      : "linear-gradient(135deg, hsl(var(--status-complete) / 0.12), hsl(var(--status-complete) / 0.05))",
+                    border: `1px solid ${snapshotData.threats > 0 ? "hsl(var(--destructive) / 0.3)" : "hsl(var(--status-complete) / 0.3)"}`,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {snapshotData.threats > 0 ? (
+                      <AlertTriangle className="w-5 h-5" style={{ color: "hsl(var(--threat-critical))" }} />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5" style={{ color: "hsl(var(--status-complete))" }} />
+                    )}
+                    <div>
+                      <span
+                        className="font-display text-base font-bold"
+                        style={{ color: snapshotData.threats > 0 ? "hsl(var(--threat-critical))" : "hsl(var(--status-complete))" }}
+                      >
+                        {snapshotData.threats > 0 ? "THREATS DETECTED" : "CLEAN"}
+                      </span>
+                      <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        Scanned {selectedDrive || "—"} with {selectedModels.size} model(s) in {snapshotData.executionTime} · {snapshotData.totalFiles} files analyzed · {snapshotData.threats} threat(s)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setShowDashboard(false); setScanStatus("idle"); setStep(1); setScanProgress(0); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: "hsl(var(--muted) / 0.6)",
+                        color: "hsl(var(--foreground))",
+                        border: "1px solid hsl(var(--border))",
+                      }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      New Scan
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Stats row */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <StatCard
@@ -600,14 +666,68 @@ export default function Index() {
                 <ThreatLedger threats={threats} loading={loading} />
               </div>
 
-              {/* File Inventory */}
+              {/* File Inventory — only flagged files (MEDIUM/HIGH/CRITICAL) */}
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="section-label">Evidence Artifacts</span>
+                  <span className="section-label">Flagged Evidence ({files.length})</span>
                   <div className="flex-1 h-px" style={{ background: "hsl(var(--border))" }} />
                 </div>
-                <FileInventory files={files} loading={loading} />
+                {files.length > 0 ? (
+                  <FileInventory files={files} loading={loading} />
+                ) : (
+                  <div className="glass-panel rounded-xl p-6 text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    <p className="text-sm">No files flagged as threats — all files are LOW risk.</p>
+                  </div>
+                )}
               </div>
+
+              {/* Action Toolbar — Report Downloads + New Scan */}
+              {scanStatus === "complete" && currentJobId && (
+                <div
+                  className="glass-panel rounded-xl px-5 py-3.5 flex items-center justify-between"
+                >
+                  <span className="section-label">Export Report</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await masterAgentAPI.downloadPdfReport(currentJobId);
+                          addLog(makeLog("info", "PDF report downloaded"));
+                        } catch (e) {
+                          addLog(makeLog("error", `PDF download failed: ${e}`));
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        background: "hsl(var(--rust))",
+                        color: "hsl(var(--primary-foreground))",
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      PDF Report
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await masterAgentAPI.downloadJsonReport(currentJobId);
+                          addLog(makeLog("info", "JSON report downloaded"));
+                        } catch (e) {
+                          addLog(makeLog("error", `JSON download failed: ${e}`));
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        background: "hsl(var(--muted) / 0.6)",
+                        color: "hsl(var(--foreground))",
+                        border: "1px solid hsl(var(--border))",
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      JSON
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Log Stream */}
               <div>

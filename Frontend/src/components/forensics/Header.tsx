@@ -1,6 +1,6 @@
 import { Settings, Cpu, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 type Status = "idle" | "scanning" | "complete" | "error";
 
@@ -11,19 +11,12 @@ const STATUS_CONFIG: Record<Status, { label: string; dotColor: string; bgColor: 
   error: { label: "Error", dotColor: "hsl(var(--destructive))", bgColor: "hsl(var(--destructive) / 0.1)" },
 };
 
-const NAV_LINKS = [
-  { to: "/", label: "Home" },
-  { to: "/master-agent", label: "Master Agent" },
-  { to: "/nlp", label: "NLP Analysis" },
-];
-
 interface HeaderProps {
   status: Status;
 }
 
 export default function Header({ status }: HeaderProps) {
   const s = STATUS_CONFIG[status];
-  const location = useLocation();
 
   return (
     <motion.header
@@ -49,27 +42,6 @@ export default function Header({ status }: HeaderProps) {
             </p>
           </div>
         </Link>
-
-        {/* Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => {
-            const active = location.pathname === link.to;
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all no-underline"
-                style={{
-                  background: active ? "hsl(var(--rust) / 0.1)" : "transparent",
-                  color: active ? "hsl(var(--rust))" : "hsl(var(--muted-foreground))",
-                  border: active ? "1px solid hsl(var(--rust) / 0.25)" : "1px solid transparent",
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
 
       {/* Right — Status + GPU + Settings */}

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+Backend/abhi/
+venv/
+.venv/
+env/
+
+# Temp wheels
+Backend/.tmp_wheels/
+
+# Environment variables
+.env
+
+# Node
+node_modules/
+Frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+Frontend/dist/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Model weights (large files)
+*.pt
+*.pth
+*.onnx

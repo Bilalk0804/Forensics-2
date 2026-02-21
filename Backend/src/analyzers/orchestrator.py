@@ -326,6 +326,7 @@ class ForensicOrchestrator:
     ) -> Dict[str, Any]:
         """Run text analysis model."""
         try:
+            import torch
             from transformers import AutoTokenizer
             
             if asset_metadata.asset_type not in [AssetType.TEXT, AssetType.DOCUMENT]:
@@ -341,12 +342,21 @@ class ForensicOrchestrator:
             with torch.no_grad():
                 outputs = model(**inputs)
 
-            return {
+            # Extract meaningful outputs instead of generic message
+            logits = outputs.logits if hasattr(outputs, 'logits') else None
+            result = {
                 "status": "success",
                 "model": "Text Analysis (BERT-based)",
                 "text_length": len(text),
-                "analysis": "Text processed successfully"
             }
+            if logits is not None:
+                probs = torch.softmax(logits, dim=-1)
+                result["top_confidence"] = float(probs.max().item())
+                result["predicted_class"] = int(probs.argmax(dim=-1).item())
+            else:
+                result["analysis"] = "Text embeddings computed"
+
+            return result
 
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -392,30 +402,68 @@ class ForensicOrchestrator:
             logger.warning(f"Feature extraction failed: {e}")
             return None
 
+    def _get_pipeline_instance(self, pipeline_name: str):
+        """Instantiate a pipeline by name."""
+        try:
+            if "text" in pipeline_name:
+                from .text_pipeline import TextPipeline
+                return TextPipeline(db=self.db_handler)
+            elif "vision" in pipeline_name:
+                from .vision_pipeline import VisionPipeline
+                return VisionPipeline(db=self.db_handler)
+            elif "malware" in pipeline_name:
+                from .malware_pipeline import MalwarePipeline
+                return MalwarePipeline(db=self.db_handler)
+            else:
+                logger.warning(f"No pipeline class mapped for: {pipeline_name}")
+                return None
+        except Exception as e:
+            logger.error(f"Failed to instantiate pipeline {pipeline_name}: {e}")
+            return None
+
     def _execute_pipelines(
         self,
         asset_metadata: AssetMetadata,
         result: AnalysisResult,
         pipelines: List[str]
     ):
-        """Execute recommended pipelines."""
+        """Execute recommended pipelines with real analysis."""
         logger.info(f"Executing {len(pipelines)} pipelines")
         
         for pipeline_name in pipelines:
             try:
                 logger.info(f"Running pipeline: {pipeline_name}")
                 
-                # Pipeline execution would happen here
-                # For now, placeholder implementation
-                pipeline_result = {
+                pipeline = self._get_pipeline_instance(pipeline_name)
+                if pipeline is None:
+                    result.pipeline_results[pipeline_name] = {
+                        "status": "skipped",
+                        "reason": f"No implementation for pipeline: {pipeline_name}"
+                    }
+                    continue
+
+                # Validate the pipeline before running
+                try:
+                    pipeline.validate()
+                except Exception as ve:
+                    logger.warning(f"Pipeline {pipeline_name} validation failed: {ve}")
+                    result.pipeline_results[pipeline_name] = {
+                        "status": "validation-failed",
+                        "error": str(ve)
+                    }
+                    continue
+
+                # Run pipeline analysis on the file
+                pipeline_result = pipeline.analyze(asset_metadata.file_path)
+
+                result.pipeline_results[pipeline_name] = {
                     "status": "completed",
-                    "pipeline": pipeline_name
+                    "pipeline": pipeline_name,
+                    "results": pipeline_result
                 }
-                
-                result.pipeline_results[pipeline_name] = pipeline_result
 
             except Exception as e:
-                logger.error(f"Pipeline {pipeline_name} failed: {e}")
+                logger.error(f"Pipeline {pipeline_name} failed: {e}", exc_info=True)
                 result.pipeline_results[pipeline_name] = {
                     "status": "error",
                     "error": str(e)
@@ -449,6 +497,49 @@ class ForensicOrchestrator:
                         "type": "anomaly",
                         "value": "ANOMALY DETECTED" if model_result["is_anomalous"] else "NORMAL"
                     })
+
+                if "top_confidence" in model_result:
+                    findings.append({
+                        "source": model_name,
+                        "type": "classification",
+                        "confidence": model_result["top_confidence"]
+                    })
+
+        # Extract findings from pipeline results
+        for pipeline_name, pipeline_result in result.pipeline_results.items():
+            if pipeline_result.get("status") == "completed":
+                pr = pipeline_result.get("results", {})
+                if isinstance(pr, dict):
+                    if pr.get("sensitive_data_found"):
+                        findings.append({
+                            "source": pipeline_name,
+                            "type": "sensitive_data",
+                            "risk_level": pr.get("risk_level", "HIGH"),
+                            "details": {
+                                "credit_cards": pr.get("credit_cards", 0),
+                                "ssn_found": pr.get("ssn_found", 0),
+                                "keywords": pr.get("suspicious_keywords", []),
+                            }
+                        })
+                    elif pr.get("suspicious_keywords"):
+                        findings.append({
+                            "source": pipeline_name,
+                            "type": "suspicious_content",
+                            "risk_level": pr.get("risk_level", "MEDIUM"),
+                            "keywords": pr.get("suspicious_keywords", [])
+                        })
+                    if pr.get("violence_detected"):
+                        findings.append({
+                            "source": pipeline_name,
+                            "type": "violence",
+                            "score": pr.get("violence_score", 0)
+                        })
+                    if pr.get("detection_count", 0) > 0:
+                        findings.append({
+                            "source": pipeline_name,
+                            "type": "detections",
+                            "count": pr.get("detection_count", 0)
+                        })
 
         result.aggregated_findings = findings
         
@@ -487,19 +578,60 @@ class ForensicOrchestrator:
     def _store_results(self, result: AnalysisResult):
         """Store analysis results to database."""
         try:
-            artifact_data = {
-                "file_path": result.asset_metadata.file_path,
+            if not self.db_handler:
+                logger.warning("No DB handler — results not persisted")
+                return
+
+            # Insert the file record if it doesn't exist
+            file_hash = getattr(result.asset_metadata, 'file_hash', '')
+            file_size = getattr(result.asset_metadata, 'file_size', 0)
+            mime_type = getattr(result.asset_metadata, 'mime_type', 'application/octet-stream')
+
+            if hasattr(self.db_handler, 'insert_file'):
+                self.db_handler.insert_file(
+                    result.asset_metadata.file_path,
+                    file_hash,
+                    file_size,
+                    mime_type,
+                )
+
+            # Store aggregated findings as an artifact
+            artifact_metadata = json.dumps({
                 "asset_type": result.asset_metadata.asset_type.value,
-                "risk_level": result.asset_metadata.risk_level.value,
-                "findings": json.dumps(result.aggregated_findings),
-                "timestamp": result.timestamp
-            }
-            
-            # This would use actual database operations
+                "model_results": result.model_results,
+                "pipeline_results": result.pipeline_results,
+                "findings": result.aggregated_findings,
+                "recommendations": result.recommendations,
+                "execution_time": result.execution_time,
+                "timestamp": result.timestamp,
+            }, default=str)
+
+            if hasattr(self.db_handler, 'insert_artifact'):
+                # We need the file_id — query it back
+                conn = self.db_handler.get_connection()
+                try:
+                    cursor = conn.execute(
+                        "SELECT file_id FROM files WHERE file_path = ?",
+                        (result.asset_metadata.file_path,)
+                    )
+                    row = cursor.fetchone()
+                    file_id = row[0] if row else None
+                finally:
+                    conn.close()
+
+                if file_id is not None:
+                    self.db_handler.insert_artifact(
+                        file_id=file_id,
+                        pipeline_name="orchestrator",
+                        risk_level=result.asset_metadata.risk_level.value,
+                        description=f"Orchestrated analysis: {len(result.aggregated_findings)} findings, risk={result.overall_risk_score}",
+                        metadata=artifact_metadata,
+                    )
+
             logger.info(f"Results stored for {result.asset_metadata.file_path}")
 
         except Exception as e:
-            logger.warning(f"Could not store results: {e}")
+            logger.warning(f"Could not store results: {e}", exc_info=True)
 
     def _check_cache(self, file_hash: str) -> Optional[AnalysisResult]:
         """Check if analysis result is cached."""

@@ -40,7 +40,9 @@ scipy>=1.10.0
 # Large Language Models
 # ============================================================================
 google-generativeai>=0.3.0  # Google Gemini API for summarization
-llama-cpp-python>=0.2.0  # Local LLaMA support
+# Windows: pin to a version with published prebuilt cp312 wheels on the llama-cpp index.
+llama-cpp-python==0.3.2; platform_system == "Windows"  # Local LLaMA support
+llama-cpp-python>=0.3.16; platform_system != "Windows"  # Local LLaMA support
 
 # ============================================================================
 # Specialized ML Models
@@ -88,6 +90,7 @@ GPUtil>=1.4.0  # GPU monitoring
 # ============================================================================
 requests>=2.31.0
 aiohttp>=3.8.0
+httpx>=0.27.0  # HTTP client for remote (Kaggle) inference
 fastapi>=0.110.0
 uvicorn>=0.29.0
 reportlab>=4.0.9
@@ -125,3 +128,5 @@ mypy>=1.4.0
 # jupyter>=1.0.0
 # jupyterlab>=4.0.0
 # ipython>=8.0.0
+# Extra wheel index for llama-cpp-python prebuilt wheels (especially Windows)
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu

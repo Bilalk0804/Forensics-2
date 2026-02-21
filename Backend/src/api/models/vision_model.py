@@ -43,11 +43,18 @@ class VisionModel:
 
         # ── ViT violence classifier ────────────────────────────
         try:
-            from transformers import ViTForImageClassification, AutoImageProcessor
+            from transformers import ViTForImageClassification, ViTImageProcessor
 
             model_name = "jaranohaal/vit-base-violence-detection"
             self.violence_model = ViTForImageClassification.from_pretrained(model_name)
-            self.violence_extractor = AutoImageProcessor.from_pretrained(model_name)
+            # preprocessor_config.json for this checkpoint lacks `image_processor_type`,
+            # so AutoImageProcessor cannot resolve it. Use ViTImageProcessor directly
+            # with the standard ViT-Base preprocessing parameters (224×224, mean/std=0.5).
+            self.violence_extractor = ViTImageProcessor(
+                size={"height": 224, "width": 224},
+                image_mean=[0.5, 0.5, 0.5],
+                image_std=[0.5, 0.5, 0.5],
+            )
             self.violence_model.eval()
             logger.info("✓ ViT violence model loaded")
         except Exception as exc:
@@ -93,6 +100,7 @@ class VisionModel:
     # ------------------------------------------------------------------ #
     def _run_yolo(self, image) -> list[dict]:
         if self.yolo is None:
+            logger.warning("YOLO model not loaded — skipping object detection")
             return []
         try:
             results = self.yolo.predict(
@@ -121,6 +129,7 @@ class VisionModel:
 
     def _run_violence(self, image) -> tuple[bool, float]:
         if self.violence_model is None or self.violence_extractor is None:
+            logger.warning("Violence detection model not loaded — skipping")
             return False, 0.0
         try:
             import torch

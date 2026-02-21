@@ -288,18 +288,31 @@ Format your response as structured JSON with clear sections.
 
     def _generate_final_insights(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Generate final consolidated insights from all analysis components."""
-        insights = {
-            "summary": "Comprehensive forensic analysis completed",
-            "key_findings": [],
-            "risk_assessment": "pending",
-            "confidence_level": "N/A"
-        }
+        key_findings = []
+        risk_levels_seen = []
+        confidence_scores = []
 
         # Extract findings from local forensics
         if "local_forensics" in result.get("analysis_components", {}):
             local = result["analysis_components"]["local_forensics"]
             if "findings" in local:
-                insights["key_findings"].extend(local["findings"])
+                key_findings.extend(local["findings"])
+            # Collect risk data
+            asset = result.get("asset_metadata", {})
+            if asset.get("risk_level"):
+                risk_levels_seen.append(asset["risk_level"])
+            # Extract model confidences
+            for model_name, model_result in local.get("model_results", {}).items():
+                if isinstance(model_result, dict):
+                    conf = model_result.get("confidence") or model_result.get("top_confidence")
+                    if conf is not None:
+                        confidence_scores.append(float(conf))
+                    if model_result.get("status") == "success":
+                        key_findings.append({
+                            "source": model_name,
+                            "type": "model_result",
+                            "detail": {k: v for k, v in model_result.items() if k != "status"}
+                        })
 
         # Extract insights from LLM synthesis
         if "llm_synthesis" in result.get("analysis_components", {}):
@@ -307,9 +320,49 @@ Format your response as structured JSON with clear sections.
             if llm.get("status") == "success":
                 synthesis = llm.get("synthesis", {})
                 if isinstance(synthesis, dict):
-                    insights.update(synthesis)
+                    # Merge LLM structured findings into insights
+                    for k, v in synthesis.items():
+                        if k not in ("summary", "key_findings", "risk_assessment", "confidence_level"):
+                            key_findings.append({"source": "llm", "type": k, "detail": v})
+                    if "key_findings" in synthesis:
+                        key_findings.extend(synthesis["key_findings"] if isinstance(synthesis["key_findings"], list) else [])
 
-        return insights
+        # Determine risk assessment
+        risk_priority = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+        if risk_levels_seen:
+            highest_risk = max(risk_levels_seen, key=lambda r: risk_priority.get(r.upper(), 0))
+        else:
+            highest_risk = "UNKNOWN"
+
+        # Determine confidence level
+        if confidence_scores:
+            avg_conf = sum(confidence_scores) / len(confidence_scores)
+            if avg_conf > 0.8:
+                confidence_label = "HIGH"
+            elif avg_conf > 0.5:
+                confidence_label = "MEDIUM"
+            else:
+                confidence_label = "LOW"
+        else:
+            confidence_label = "UNKNOWN"
+
+        # Build summary from actual results
+        components_count = len(result.get("analysis_components", {}))
+        findings_count = len(key_findings)
+        summary = (
+            f"Forensic analysis completed using {components_count} component(s). "
+            f"{findings_count} finding(s) identified. "
+            f"Overall risk: {highest_risk}."
+        )
+
+        return {
+            "summary": summary,
+            "key_findings": key_findings,
+            "risk_assessment": highest_risk,
+            "confidence_level": confidence_label,
+            "findings_count": findings_count,
+            "average_confidence": round(avg_conf, 4) if confidence_scores else None,
+        }
 
     def batch_analyze(
         self,

@@ -45,11 +45,11 @@ class DeepfakeModel:
         Returns dict with: is_deepfake, confidence, label
         """
         if self.model is None or self.processor is None:
-            return {"is_deepfake": False, "confidence": 0.5, "label": "model-unavailable"}
+            return {"is_deepfake": False, "confidence": 0.0, "label": "model-unavailable", "error": "Deepfake model failed to load"}
 
         frames = self._extract_frames(data)
         if not frames:
-            return {"is_deepfake": False, "confidence": 0.0, "label": "no-frames"}
+            return {"is_deepfake": False, "confidence": 0.0, "label": "no-frames", "error": "Could not extract frames from input"}
 
         scores = []
         for frame in frames:
@@ -58,7 +58,7 @@ class DeepfakeModel:
                 scores.append(score)
 
         if not scores:
-            return {"is_deepfake": False, "confidence": 0.0, "label": "inference-error"}
+            return {"is_deepfake": False, "confidence": 0.0, "label": "inference-error", "error": "Frame classification failed for all frames"}
 
         avg_fake_score = sum(scores) / len(scores)
         is_deepfake = avg_fake_score > 0.5

@@ -152,6 +152,7 @@ def run_analysis(job_id: str) -> dict:
         if text_model:
             analysis = text_model.predict(text)
         else:
+            logger.warning("Text model not available for NLP analysis on %s", filename)
             analysis = {
                 "label": "model-unavailable",
                 "confidence": 0.0,
@@ -160,6 +161,7 @@ def run_analysis(job_id: str) -> dict:
                 "summary": "",
                 "categories": [],
                 "risk_level": "UNKNOWN",
+                "error": "NLP text model failed to load at startup. Check server logs.",
             }
 
         evidence_count = len(analysis.get("entities", []))
