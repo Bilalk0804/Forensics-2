@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "job_id": "job_20260219_233530",
+    "start_time": "2026-02-19T23:35:30.906144",
+    "end_time": "2026-02-19T23:35:30.965594",
+    "evidence_path": "Backend\\EVIDENCE_LOCKER",
+    "pipelines_run": [
+      "file"
+    ],
+    "total_files": 0
+  },
+  "summary": {
+    "total_findings": 0,
+    "pipelines_executed": 1,
+    "high_risk_items": 0,
+    "analysis_status": "completed"
+  },
+  "findings": {
+    "file": {
+      "status": "completed",
+      "findings": 0,
+      "pipeline": "file"
+    }
+  }
+}

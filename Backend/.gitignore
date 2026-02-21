@@ -1,0 +1,106 @@
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+*.spec
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# ========================
+# Environment / Secrets
+# ========================
+.env
+.env.*
+*.env
+secrets.py
+config_local.py
+
+# ========================
+# Backend: Generated Output
+# ========================
+Backend/01_OUTPUT/reports/
+Backend/01_OUTPUT/logs/
+Backend/01_OUTPUT/combined_test/
+Backend/01_OUTPUT/*.db
+
+# ========================
+# Backend: User Uploads
+# ========================
+Backend/api/uploads/
+
+# ========================
+# Backend: Sensitive Case Data
+# ========================
+Backend/EVIDENCE_LOCKER/*
+!Backend/EVIDENCE_LOCKER/.placeholder
+
+# ========================
+# Backend: Dependencies (local .whl cache)
+# ========================
+Backend/DEPENDENCIES/
+
+# ========================
+# Database files
+# ========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
+
+# ========================
+# Node / Frontend
+# ========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# ========================
+# OS & Editor
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.keras
+*.h5
+*.pkl
+venv/
+__pycache__/
+# Models and Databases
+*.keras
+*.db
+*.h5
+
+# Reports and dynamic JSON
+analysis_report_*.json
+Backend/OUTPUT/
+Backend/01_OUTPUT/
+
+# Python and Environment
+venv/
+__pycache__/
+.env

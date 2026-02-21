@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────
+   SENTINEL FORENSICS — Modern AI Dashboard Design System
+   Dark theme with orange accent · Glassmorphism · Clean product UI
+────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Core surfaces */
+    --background: 225 25% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 225 22% 9%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 225 22% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    /* Orange accent — primary brand */
+    --primary: 24 95% 53%;
+    --primary-foreground: 225 25% 6%;
+
+    /* Muted slate */
+    --secondary: 222 20% 13%;
+    --secondary-foreground: 210 15% 72%;
+
+    --muted: 222 18% 11%;
+    --muted-foreground: 220 12% 48%;
+
+    /* Warm accent */
+    --accent: 24 95% 53%;
+    --accent-foreground: 225 25% 6%;
+
+    /* Threat red */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 210 20% 95%;
+
+    --border: 222 18% 16%;
+    --input: 222 20% 13%;
+    --ring: 24 95% 53%;
+
+    --radius: 0.75rem;
+
+    /* Glass tokens */
+    --glass-bg: 225 22% 9%;
+    --glass-border: 222 18% 18%;
+    --glass-shine: 210 30% 80%;
+
+    /* Brand tokens */
+    --rust: 24 95% 53%;
+    --rust-dim: 24 70% 40%;
+    --rust-glow: 24 100% 60%;
+
+    --sand: 38 55% 58%;
+    --sand-dim: 38 35% 42%;
+
+    --slate-deep: 225 25% 6%;
+    --slate-panel: 222 20% 10%;
+    --slate-raised: 222 18% 14%;
+    --slate-border: 222 16% 20%;
+
+    --threat-critical: 0 80% 55%;
+    --threat-high: 24 90% 50%;
+    --threat-medium: 45 90% 52%;
+    --threat-low: 160 60% 42%;
+    --threat-clean: 220 12% 45%;
+
+    --status-complete: 142 65% 42%;
+    --status-running: 24 95% 53%;
+    --status-queued: 220 20% 38%;
+    --status-error: 0 75% 55%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .font-display {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-weight: 700;
+  }
+
+  .font-mono {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  }
+}
+
+@layer components {
+  /* Modern glass card */
+  .glass-panel {
+    background: hsl(var(--glass-bg) / 0.7);
+    border: 1px solid hsl(var(--glass-border));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      0 0 0 1px hsl(var(--glass-shine) / 0.03) inset,
+      0 8px 32px -8px hsl(var(--slate-deep) / 0.5);
+  }
+
+  .glass-panel-hover {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .glass-panel-hover:hover {
+    border-color: hsl(var(--rust) / 0.35);
+    box-shadow:
+      0 0 0 1px hsl(var(--glass-shine) / 0.03) inset,
+      0 8px 32px -8px hsl(var(--rust) / 0.15);
+  }
+
+  /* Threat severity badges */
+  .badge-critical {
+    background: hsl(var(--threat-critical) / 0.15);
+    color: hsl(var(--threat-critical));
+    border: 1px solid hsl(var(--threat-critical) / 0.3);
+  }
+  .badge-high {
+    background: hsl(var(--threat-high) / 0.15);
+    color: hsl(var(--threat-high));
+    border: 1px solid hsl(var(--threat-high) / 0.3);
+  }
+  .badge-medium {
+    background: hsl(var(--threat-medium) / 0.15);
+    color: hsl(var(--threat-medium));
+    border: 1px solid hsl(var(--threat-medium) / 0.3);
+  }
+  .badge-low {
+    background: hsl(var(--threat-low) / 0.15);
+    color: hsl(var(--threat-low));
+    border: 1px solid hsl(var(--threat-low) / 0.3);
+  }
+  .badge-clean {
+    background: hsl(var(--threat-clean) / 0.15);
+    color: hsl(var(--threat-clean));
+    border: 1px solid hsl(var(--threat-clean) / 0.3);
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Metric value */
+  .metric-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 2.25rem;
+    line-height: 1;
+    color: hsl(var(--foreground));
+  }
+
+  /* Speed badges for model cards */
+  .speed-fast {
+    background: hsl(var(--status-complete) / 0.12);
+    color: hsl(var(--status-complete));
+    border: 1px solid hsl(var(--status-complete) / 0.2);
+  }
+  .speed-balanced {
+    background: hsl(var(--rust) / 0.12);
+    color: hsl(var(--rust));
+    border: 1px solid hsl(var(--rust) / 0.2);
+  }
+  .speed-accurate {
+    background: hsl(var(--threat-medium) / 0.12);
+    color: hsl(var(--threat-medium));
+    border: 1px solid hsl(var(--threat-medium) / 0.2);
+  }
+
+  /* Forensic input (kept for search fields) */
+  .forensic-input {
+    background: hsl(var(--slate-panel));
+    border: 1px solid hsl(var(--slate-border));
+    color: hsl(var(--foreground));
+    font-size: 0.8125rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .forensic-input:focus {
+    outline: none;
+    border-color: hsl(var(--rust) / 0.6);
+    box-shadow: 0 0 0 3px hsl(var(--rust) / 0.12);
+  }
+  .forensic-input::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .forensic-select {
+    background: hsl(var(--slate-panel));
+    border: 1px solid hsl(var(--slate-border));
+    color: hsl(var(--foreground));
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+  .forensic-select:focus {
+    outline: none;
+    border-color: hsl(var(--rust) / 0.6);
+    box-shadow: 0 0 0 3px hsl(var(--rust) / 0.12);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid hsl(var(--slate-border));
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .btn-ghost:hover {
+    border-color: hsl(var(--rust) / 0.5);
+    color: hsl(var(--foreground));
+    background: hsl(var(--rust) / 0.06);
+  }
+
+  /* Log stream styles */
+  .log-entry {
+    border-left: 2px solid hsl(var(--slate-border));
+    transition: border-color 0.15s ease;
+  }
+  .log-entry:hover {
+    border-left-color: hsl(var(--rust) / 0.5);
+  }
+  .log-entry.log-warn {
+    border-left-color: hsl(var(--threat-medium) / 0.6);
+  }
+  .log-entry.log-error {
+    border-left-color: hsl(var(--threat-critical) / 0.7);
+  }
+  .log-entry.log-info {
+    border-left-color: hsl(var(--status-complete) / 0.5);
+  }
+
+  /* Pulse animation */
+  .pulse-dot {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes log-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.log-animate {
+  animation: log-slide-in 0.25s ease forwards;
+}

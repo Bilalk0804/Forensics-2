@@ -1,0 +1,264 @@
+/* AnalysisRunner Component Styles */
+
+.analysis-runner {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.runner-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-bottom: none;
+}
+
+.runner-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.runner-content {
+  padding: 2rem;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.required {
+  color: #d32f2f;
+  margin-left: 0.25rem;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.875rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-field:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.input-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.model-summary {
+  background: #f5f5f5;
+  border-left: 4px solid #667eea;
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.model-summary h4 {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.selected-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #667eea;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.model-badge .checkmark {
+  font-size: 1rem;
+  margin-left: 0.25rem;
+}
+
+.model-summary .warning {
+  color: #ff9800;
+  font-style: italic;
+  margin: 0;
+}
+
+.status-box {
+  background: #f0f7ff;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.status-box.error {
+  background: #fef5f5;
+  border-color: #d32f2f;
+}
+
+.status-box.success {
+  background: #f1f8f4;
+  border-color: #4caf50;
+}
+
+.status-text {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.status-box.error .status-text {
+  color: #d32f2f;
+}
+
+.status-box.success .status-text {
+  color: #4caf50;
+}
+
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #ddd;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.job-id {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'Courier New', monospace;
+}
+
+.runner-footer {
+  padding: 1.5rem 2rem;
+  background: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+.run-button {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.run-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.run-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.run-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .runner-content {
+    padding: 1.5rem;
+  }
+
+  .runner-footer {
+    padding: 1rem 1.5rem;
+  }
+
+  .run-button {
+    padding: 0.875rem;
+    font-size: 0.95rem;
+  }
+
+  .selected-models {
+    gap: 0.5rem;
+  }
+
+  .model-badge {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}

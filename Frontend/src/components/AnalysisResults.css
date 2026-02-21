@@ -1,0 +1,265 @@
+/* AnalysisResults Component Styles */
+
+.analysis-results {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.analysis-results.empty {
+  padding: 2rem;
+  text-align: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.results-header {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 1.5rem;
+  border-bottom: none;
+}
+
+.results-header h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.results-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.job-id,
+.timestamp {
+  display: flex;
+  align-items: center;
+  font-family: 'Courier New', monospace;
+}
+
+.results-summary,
+.results-models,
+.raw-output {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.results-summary:last-child,
+.results-models:last-child,
+.raw-output:last-child {
+  border-bottom: none;
+}
+
+.results-summary h4,
+.results-models h4,
+.raw-output h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-content {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #4caf50;
+}
+
+.summary-content p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.summary-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.summary-content li {
+  padding: 0.5rem 0;
+  color: #555;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.summary-content li:last-child {
+  border-bottom: none;
+}
+
+.summary-content strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.model-result {
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.model-result:last-child {
+  margin-bottom: 0;
+}
+
+.model-result-header {
+  width: 100%;
+  padding: 1rem;
+  background: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  transition: background 0.3s ease;
+}
+
+.model-result-header:hover {
+  background: #efefef;
+}
+
+.expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: #667eea;
+  transition: transform 0.3s ease;
+}
+
+.model-name {
+  flex: 1;
+  text-align: left;
+}
+
+.result-status {
+  font-size: 0.85rem;
+  color: #4caf50;
+  font-weight: 500;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.model-result-content {
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.result-data {
+  margin: 0;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.no-data {
+  margin: 0;
+  color: #999;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+}
+
+.raw-output {
+  background: #f5f5f5;
+}
+
+.raw-output pre {
+  margin: 0;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #333;
+  max-height: 400px;
+}
+
+.results-actions {
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.download-btn,
+.copy-btn {
+  padding: 0.75rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.download-btn:hover,
+.copy-btn:hover {
+  background: #764ba2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.download-btn:active,
+.copy-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .results-summary,
+  .results-models,
+  .raw-output {
+    padding: 1rem;
+  }
+
+  .model-result-content {
+    padding: 1rem;
+  }
+
+  .result-data,
+  .raw-output pre {
+    font-size: 0.75rem;
+  }
+
+  .results-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .results-actions {
+    flex-direction: column;
+  }
+
+  .download-btn,
+  .copy-btn {
+    width: 100%;
+  }
+}
