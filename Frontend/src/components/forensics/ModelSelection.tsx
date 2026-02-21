@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { Eye, FileText, Bug, FileSearch, Headphones, Drama, Microscope } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { ModelOption } from "@/lib/api";
 
 interface ModelSelectionProps {
@@ -8,13 +10,13 @@ interface ModelSelectionProps {
   loading?: boolean;
 }
 
-const MODEL_ICONS: Record<string, string> = {
-  vision: "👁️",
-  text: "📝",
-  malware: "🦠",
-  file: "📋",
-  audio: "🎧",
-  deepfake: "🎭",
+const MODEL_ICONS: Record<string, LucideIcon> = {
+  vision: Eye,
+  text: FileText,
+  malware: Bug,
+  file: FileSearch,
+  audio: Headphones,
+  deepfake: Drama,
 };
 
 export default function ModelSelection({ models, selectedModels, onToggle, loading }: ModelSelectionProps) {
@@ -85,7 +87,7 @@ export default function ModelSelection({ models, selectedModels, onToggle, loadi
                     )}
                   </div>
 
-                  <span className="text-xl">{MODEL_ICONS[id] || "🔬"}</span>
+                  {(() => { const Ic = MODEL_ICONS[id] || Microscope; return <Ic className="w-5 h-5" style={{ color: selected ? "hsl(var(--rust))" : "hsl(var(--muted-foreground))" }} />; })()}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

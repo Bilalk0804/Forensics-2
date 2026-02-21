@@ -1,4 +1,4 @@
-import { Settings, Cpu, ShieldCheck } from "lucide-react";
+import { Cpu, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -22,7 +22,8 @@ export default function Header({ status }: HeaderProps) {
     <motion.header
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-between px-6 py-4"
+      className="sticky top-0 z-50 flex items-center justify-between px-6 py-3.5 backdrop-blur-xl"
+      style={{ background: "hsl(var(--background) / 0.85)", borderBottom: "1px solid hsl(var(--border) / 0.5)" }}
     >
       {/* Left — Branding */}
       <div className="flex items-center gap-6">
@@ -70,18 +71,6 @@ export default function Header({ status }: HeaderProps) {
           <Cpu className="w-3.5 h-3.5" />
           GPU Ready
         </div>
-
-        {/* Settings */}
-        <button
-          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-          style={{
-            background: "hsl(var(--muted) / 0.5)",
-            border: "1px solid hsl(var(--border))",
-            color: "hsl(var(--muted-foreground))",
-          }}
-        >
-          <Settings className="w-4 h-4" />
-        </button>
       </div>
     </motion.header>
   );
