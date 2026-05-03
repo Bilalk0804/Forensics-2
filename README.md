@@ -5,8 +5,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-2.0.0-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=flat&logo=react)](https://reactjs.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=flat&logo=pytorch)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-Research-blue.svg)](LICENSE)
-
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ---
 
 ## 📋 Table of Contents
@@ -1882,3 +1881,10 @@ This project is provided for research and educational purposes. See [LICENSE](LI
 ---
 
 **Built with ❤️ for the digital forensics and cybersecurity community.**
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+**Note on Third-Party Models and Dependencies**: 
+While the core engine is open-source under Apache 2.0, this project utilizes pre-trained models (e.g., YOLOv8, CLIP, Whisper) and datasets that are subject to their own respective licenses. Users are responsible for reviewing and adhering to the licenses of individual third-party weights and dependencies, especially regarding commercial use.
