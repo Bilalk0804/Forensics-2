@@ -1,0 +1,32 @@
+{
+  "name": "ciap-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.7",
+    "axios": "^1.7.7",
+    "framer-motion": "^11.11.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-force-graph-2d": "^1.25.5",
+    "react-leaflet": "^4.2.1",
+    "react-router-dom": "^6.26.2",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.13.0",
+    "sonner": "^1.5.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build"
+  },
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13"
+  }
+}

@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #06080A;
+  color: #E6EDF3;
+  font-family: "IBM Plex Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01" on, "ss02" on;
+}
+
+::selection { background: #2F81F7; color: #06080A; }
+
+.mono { font-family: "JetBrains Mono", monospace; }
+.display { font-family: "Chivo", sans-serif; letter-spacing: -0.01em; }
+.overline {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 10px;
+  color: #8B949E;
+  font-weight: 500;
+}
+
+.panel { background: #0E1218; border: 1px solid #2D333B; }
+.panel-elevated { background: #161B22; border: 1px solid #2D333B; }
+.divider { border-color: #2D333B; }
+
+.btn {
+  padding: 6px 14px; border: 1px solid #2D333B; background: #161B22;
+  color: #E6EDF3; font-family: "Chivo", sans-serif; font-size: 12px;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+.btn:hover { background: #1F2731; border-color: #58A6FF; }
+.btn-primary { background: #2F81F7; border-color: #2F81F7; color: #06080A; font-weight: 700; }
+.btn-primary:hover { background: #1F6FEB; border-color: #1F6FEB; }
+
+.input {
+  background: #06080A; border: 1px solid #2D333B; color: #E6EDF3;
+  padding: 8px 10px; font-family: "IBM Plex Sans", sans-serif; font-size: 13px;
+  width: 100%; outline: none;
+}
+.input:focus { border-color: #2F81F7; }
+select.input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #8B949E 50%),
+                    linear-gradient(135deg, #8B949E 50%, transparent 50%);
+  background-position: calc(100% - 14px) 55%, calc(100% - 9px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px;
+}
+select.input option { background: #0E1218; color: #E6EDF3; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid #2D333B; padding: 2px 6px; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.14em; color: #8B949E;
+  font-family: "JetBrains Mono", monospace;
+}
+.chip-low  { border-color: #3FB950; color: #3FB950; background: rgba(63,185,80,0.06); }
+.chip-med  { border-color: #D29922; color: #D29922; background: rgba(210,153,34,0.08); }
+.chip-high { border-color: #F78166; color: #F78166; background: rgba(247,129,102,0.08); }
+.chip-crit { border-color: #F85149; color: #F85149; background: rgba(248,81,73,0.10); }
+
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #2D333B; }
+.scrollbar-thin::-webkit-scrollbar-track { background: #06080A; }
+
+/* Leaflet dark overrides */
+.leaflet-container { background: #06080A; }
+.leaflet-tile { filter: brightness(0.55) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
+.leaflet-control-attribution { background: rgba(6,8,10,0.8) !important; color: #484F58 !important; font-size: 9px; }
+.leaflet-control-attribution a { color: #8B949E !important; }
+.leaflet-control-zoom a { background: #0E1218 !important; color: #E6EDF3 !important; border: 1px solid #2D333B !important; }
