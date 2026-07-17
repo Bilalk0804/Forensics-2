@@ -42,3 +42,9 @@ Frontend/dist/
 *.pt
 *.pth
 *.onnx
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
