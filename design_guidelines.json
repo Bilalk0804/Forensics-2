@@ -1,0 +1,110 @@
+{
+  "project": "Crime Intelligence & Analytical Platform (CIAP)",
+  "theme": "dark",
+  "typography": {
+    "headings": "Chivo",
+    "body": "IBM Plex Sans",
+    "monospace": "JetBrains Mono",
+    "rules": [
+      "Use Chivo for all headers (H1-H4) to provide a solid, utilitarian, commanding structure.",
+      "Use IBM Plex Sans for body text to ensure maximum legibility at high data density.",
+      "Use JetBrains Mono exclusively for numerical data, coordinates, risk scores, node IDs, and KPIs to create a raw, terminal-like operational feel.",
+      "CRITICAL: Banned fonts include Inter, Roboto, Open Sans, Lato."
+    ]
+  },
+  "colors": {
+    "archetype": "The Tactical Command Center / High-Contrast Swiss",
+    "background": {
+      "base": "#06080A",
+      "surface": "#0E1218",
+      "surface_elevated": "#161B22",
+      "rule": "Never use pure white or light grey modes. This is a mission-critical dark environment. Do NOT use transparent backgrounds in dropdowns/headers."
+    },
+    "text": {
+      "primary": "#E6EDF3",
+      "secondary": "#8B949E",
+      "muted": "#484F58"
+    },
+    "borders": {
+      "default": "#2D333B",
+      "active": "#58A6FF",
+      "critical": "#F85149"
+    },
+    "risk_gradient": {
+      "low": "#3FB950",
+      "medium": "#D29922",
+      "high": "#F78166",
+      "critical": "#F85149",
+      "pulse_animation_color": "rgba(248, 81, 73, 0.4)"
+    },
+    "accent": {
+      "primary": "#2F81F7",
+      "hover": "#1F6FEB"
+    }
+  },
+  "visual_enhancers": {
+    "surfaces": "Grid Borders ('Technical' Look). Expose the skeleton. High-density dashboards must have a visible grid structure. Use 1px solid borders (`border-border`) between sections. NO soft shadows. NO glassmorphism for data panels (it reduces clarity). 2-4px border radius at most.",
+    "motion": "Reactive & State-Driven. Minimalist animation. Avoid bouncy or long transitions. Use micro-interactions for feedback (e.g., instant 0.1s color shifts on hover). Critical alerts use a rapid 'heartbeat' pulse animation on the map or KPI card.",
+    "spacing": "Dense & Compact. Rely on Tailwind `p-2`, `p-3`, `p-4` inside widget cards. Maximize vertical space. Use full screen (`100vw`, `100vh`) with no scrolling where possible."
+  },
+  "layouts": {
+    "dashboard_layout": "Three-panel 'F-shaped' hierarchy based on Palantir patterns: Left panel (20% width) for Navigation, Entity Lists & Filters. Center panel (50% width) for Map and Graph visualizations. Right panel (30% width) for Context, AI Risk Scores, and deep-dive Case Details.",
+    "bento_density": "High Density Grid. Base grid `grid-cols-1 md:grid-cols-12`. Gaps should be tight (`gap-[1px]` inside a border-collapse container). Every pixel must be utilized for data projection."
+  },
+  "components": {
+    "kpi_cards": "Flat background, 1px subtle border, sharp corners. Monospace numbers for values. Tiny uppercase overlines for labels (`tracking-[0.2em]`). Include a micro-sparkline using Recharts.",
+    "map_view": "Dark tactical style. Map container MUST fill its parent grid slot completely. Overlay scatterplot or heatmap layer. Use pulsing circles for hotspots utilizing the `risk_gradient.critical` color.",
+    "network_graph": "Node-link graph. Nodes represent Suspects (Red), Victims (Green), Locations (Blue). Lines represent links. Background must be transparent `#00000000` to blend with the UI surface.",
+    "tables": "Dense rows. Sticky headers. Monospace font for IDs, Dates, and Coordinates. Status badges using risk gradient colors with 10% opacity backgrounds and 1px borders.",
+    "forms": "Use Shadcn components but strip the generic Vercel look. Hard angles (rounded-sm or rounded-none). Distinct focus rings using tactical blue."
+  },
+  "libraries": {
+    "icons": "@phosphor-icons/react (Duotone or Regular for dense data tools, avoiding 'corporate tech' default look)",
+    "charts": "recharts",
+    "maps": "react-simple-maps or leaflet (react-leaflet) with dark-mode tile provider",
+    "network": "react-force-graph-2d",
+    "motion": "framer-motion (for the red-zone pulsing only)"
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets APCA standards. Deep black background requires off-white text (`#E6EDF3`). Avoid pure white to reduce eye strain.",
+    "testing": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid=\"risk-score-card\"`, `data-testid=\"filter-district-select\"`)."
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1587400563356-2f6cf901cfbb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwyfHx0YWN0aWNhbCUyMGRhdGElMjBtYXAlMjBkYXJrJTIwVUl8ZW58MHx8fHwxNzg0MjcyMTk4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Tactical dark map screen, highly suitable for a low-opacity background behind a serious login prompt.",
+      "category": "background"
+    },
+    "network_abstract": {
+      "url": "https://images.unsplash.com/photo-1770486036751-e55247238964?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxuZXR3b3JrJTIwZ3JhcGglMjBhYnN0cmFjdCUyMGRhcmt8ZW58MHx8fHwxNzg0MjcyMTk3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract network graph points. Can be used for link analysis blank state or predictive AI loading screens.",
+      "category": "illustration"
+    }
+  },
+  "mock_data_guidance": {
+    "karnataka_districts": ["Bengaluru Urban", "Mysuru", "Hubballi-Dharwad", "Mangaluru", "Belagavi", "Kalaburagi", "Shivamogga", "Ballari"],
+    "crime_heads": ["Cybercrime", "Property Theft", "Narcotics (NDPS)", "Organized Crime", "Financial Fraud", "Violent Crime"],
+    "scenarios": "Simulate a 'Red-zone' alert in Bengaluru Urban (high density of Cybercrime) and an emerging narcotics hotspot in Mangaluru."
+  },
+  "instructions_to_main_agent": [
+    "Do NOT use standard Shadcn round cards. Override border-radius to 2px or 4px.",
+    "DO NOT use Inter or Roboto. Inject Chivo, IBM Plex Sans, and JetBrains Mono.",
+    "Implement the Palantir F-shaped layout: Nav/Filters on Left, Visualization in Center, Deep Dive/Action on Right.",
+    "Use grid lines to separate sections rather than floating cards on a grey background. This is a tactical command center.",
+    "Implement a 'Pulse' animation on high-risk map nodes using Framer Motion.",
+    "Use Phosphor Icons. Do not use generic emoji or Vercel default icons.",
+    "Use Recharts with dark-mode styling (remove axis lines, use dotted grid lines).",
+    "Ensure the entire app is wrapped in a dark theme by default, with `bg-[#06080A] text-[#E6EDF3]` on the root element.",
+    "Avoid purple-gradient AI-slop completely. Rely on the pure, strict colors defined in the risk_gradient.",
+    "Use actual JavaScript (.js/.jsx), do not write TypeScript (.tsx) as specified by environment rules."
+  ],
+  "universal_guidelines": [
+    "You tend to converge toward generic outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Create depth through layered design elements with z-index hierarchy, but prefer solid colored borders for data-dense apps over shadow blobs.",
+    "You MUST NOT apply universal transition. Eg: `transition: all`.",
+    "You MUST NOT center align the app container. Do not add `.App { text-align: center; }`.",
+    "Never use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Use sonner for toasts, located in `/app/frontend/src/components/ui/sonner.js`.",
+    "All interactive and key informational elements MUST include a `data-testid` attribute to facilitate robust automated testing."
+  ]
+}
